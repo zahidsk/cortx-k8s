@@ -473,17 +473,8 @@ done <<< "$(kubectl get pods -A | grep 'openldap-')"
 ./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.shared" $(extractBlock 'solution.common.storage.shared')
 ./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.log" $(extractBlock 'solution.common.storage.log')
 
-# Create cortx data services temp file that contains all the data services in the cluster
-cortx_data_svc_temp_file="$auto_gen_path/cortx-data-services.yaml"
-
 # Generate config files
 for i in "${!node_name_list[@]}"; do
-    # Populate Cortx data services in "cortx-data-services.yaml" file
-    if [[ -s $cortx_data_svc_temp_file ]]; then
-        printf "\n" >> $cortx_data_svc_temp_file
-    fi
-    printf -- "- https://cortx-data-clusterip-svc-${node_name_list[$i]}:8081" >> $cortx_data_svc_temp_file
-
     # Generate node file with type storage_node in "node-info" folder
     new_gen_file="$node_info_folder/cluster-storage-node-${node_name_list[$i]}.yaml"
     cp "$cfgmap_path/templates/cluster-node-template.yaml" $new_gen_file
@@ -498,11 +489,6 @@ for i in "${!node_name_list[@]}"; do
     mkdir -p $auto_gen_node_path
     echo $uuid_str > $auto_gen_node_path/id
 done
-
-# Insert Cortx data services block into "<<.Values.cortx.data.svc>>"
-extract_output="$(./parse_scripts/yaml_extract_block.sh $cortx_data_svc_temp_file)"
-./parse_scripts/yaml_insert_block.sh "$auto_gen_path/config.yaml" "$extract_output" 6 "cortx.data.svc"
-rm $cortx_data_svc_temp_file # Remove "cortx-data-services.yaml" file as it's not needed anymore
 
 # Generate node file with type control_node in "node-info" folder
 new_gen_file="$node_info_folder/cluster-control-node.yaml"
