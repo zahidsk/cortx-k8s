@@ -444,36 +444,46 @@ mkdir -p $storage_info_temp_folder
 auto_gen_path="$cfgmap_path/auto-gen-cfgmap"
 mkdir -p $auto_gen_path
 
+new_gen_file="$auto_gen_path/config.yaml"
+cp "$cfgmap_path/templates/config-template.yaml" $new_gen_file
+
+# 3rd party endpoints
+kafka_endpoint="kafka.default.svc.cluster.local"
+openldap_endpoint="openldap-svc.default.svc.cluster.local"
+consul_endpoint="consul-server.default.svc.cluster.local"
+openldap_servers=""
+while IFS= read -r line; do
+    IFS=" " read -r -a my_array <<< "$line"
+    if [ "$openldap_servers" == "" ]
+    then
+        openldap_servers="- ""${my_array[1]}"".""$openldap_endpoint"
+    else
+        openldap_servers="$openldap_servers"$'\n'"- ""${my_array[1]}"".""$openldap_endpoint"
+    fi
+done <<< "$(kubectl get pods -A | grep 'openldap-')"
+
+./parse_scripts/subst.sh $new_gen_file "cortx.external.kafka.endpoints" $kafka_endpoint
+./parse_scripts/subst.sh $new_gen_file "cortx.external.openldap.endpoints" $openldap_endpoint
+./parse_scripts/yaml_insert_block.sh $new_gen_file "$openldap_servers" 8 "cortx.external.openldap.servers"
+./parse_scripts/subst.sh $new_gen_file "cortx.external.consul.endpoints" $consul_endpoint
+./parse_scripts/subst.sh $new_gen_file "cortx.io.svc" "cortx-io-svc"
+./parse_scripts/subst.sh $new_gen_file "cortx.num_s3_inst" $(extractBlock 'solution.common.s3.num_inst')
+./parse_scripts/subst.sh $new_gen_file "cortx.num_motr_inst" $(extractBlock 'solution.common.motr.num_client_inst')
+./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.local" $(extractBlock 'solution.common.storage.local')
+./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.shared" $(extractBlock 'solution.common.storage.shared')
+./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.log" $(extractBlock 'solution.common.storage.log')
+
+# Create cortx data services temp file that contains all the data services in the cluster
+cortx_data_svc_temp_file="$auto_gen_path/cortx-data-services.yaml"
+
 # Generate config files
 for i in "${!node_name_list[@]}"; do
-    new_gen_file="$auto_gen_path/config.yaml"
-    cp "$cfgmap_path/templates/config-template.yaml" $new_gen_file
-    # 3rd party endpoints
-    kafka_endpoint="kafka.default.svc.cluster.local"
-    openldap_endpoint="openldap-svc.default.svc.cluster.local"
-    consul_endpoint="consul-server.default.svc.cluster.local"
-    openldap_servers=""
-    while IFS= read -r line; do
-        IFS=" " read -r -a my_array <<< "$line"
-        if [ "$openldap_servers" == "" ]
-        then
-            openldap_servers="- ""${my_array[1]}"".""$openldap_endpoint"
-        else
-            openldap_servers="$openldap_servers"$'\n'"- ""${my_array[1]}"".""$openldap_endpoint"
-        fi
-    done <<< "$(kubectl get pods -A | grep 'openldap-')"
+    # Populate Cortx data services in "cortx-data-services.yaml" file
+    if [[ -s $cortx_data_svc_temp_file ]]; then
+        printf "\n" >> $cortx_data_svc_temp_file
+    fi
+    printf -- "- https://cortx-data-clusterip-svc-${node_name_list[$i]}:8081" >> $cortx_data_svc_temp_file
 
-    ./parse_scripts/subst.sh $new_gen_file "cortx.external.kafka.endpoints" $kafka_endpoint
-    ./parse_scripts/subst.sh $new_gen_file "cortx.external.openldap.endpoints" $openldap_endpoint
-    ./parse_scripts/yaml_insert_block.sh $new_gen_file "$openldap_servers" 8 "cortx.external.openldap.servers"
-    ./parse_scripts/subst.sh $new_gen_file "cortx.external.consul.endpoints" $consul_endpoint
-    ./parse_scripts/subst.sh $new_gen_file "cortx.io.svc" "cortx-io-svc"
-    ./parse_scripts/subst.sh $new_gen_file "cortx.data.svc" "cortx-data-clusterip-svc-${node_name_list[$i]}"
-    ./parse_scripts/subst.sh $new_gen_file "cortx.num_s3_inst" $(extractBlock 'solution.common.s3.num_inst')
-    ./parse_scripts/subst.sh $new_gen_file "cortx.num_motr_inst" $(extractBlock 'solution.common.motr.num_client_inst')
-    ./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.local" $(extractBlock 'solution.common.storage.local')
-    ./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.shared" $(extractBlock 'solution.common.storage.shared')
-    ./parse_scripts/subst.sh $new_gen_file "cortx.common.storage.log" $(extractBlock 'solution.common.storage.log')
     # Generate node file with type storage_node in "node-info" folder
     new_gen_file="$node_info_folder/cluster-storage-node-${node_name_list[$i]}.yaml"
     cp "$cfgmap_path/templates/cluster-node-template.yaml" $new_gen_file
@@ -488,6 +498,11 @@ for i in "${!node_name_list[@]}"; do
     mkdir -p $auto_gen_node_path
     echo $uuid_str > $auto_gen_node_path/id
 done
+
+# Insert Cortx data services block into "<<.Values.cortx.data.svc>>"
+extract_output="$(./parse_scripts/yaml_extract_block.sh $cortx_data_svc_temp_file)"
+./parse_scripts/yaml_insert_block.sh "$auto_gen_path/config.yaml" "$extract_output" 6 "cortx.data.svc"
+rm $cortx_data_svc_temp_file # Remove "cortx-data-services.yaml" file as it's not needed anymore
 
 # Generate node file with type control_node in "node-info" folder
 new_gen_file="$node_info_folder/cluster-control-node.yaml"
