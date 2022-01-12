@@ -47,6 +47,13 @@ solution:
     resource_allocation:
       consul:
         server:
+          endpoints:
+            - protocol: tcp
+              name: consul-server
+              port: 8301
+            - protocol: http
+              name: consul-server
+              port: 8500
           storage: 10Gi
           resources:
             requests:
