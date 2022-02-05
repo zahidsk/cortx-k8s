@@ -19,6 +19,7 @@ spec:
         cortx.io/machine-id: {{ .Values.cortxdata.machineid.value }}
         {{- end }}
         cortx.io/service-type: cortx-data
+        cortx.io/hax-enabled: "true"
     {{- $nodeselector := (.Values.cortxdata.nodeselector) }}
     {{- $nodeparts := split "." $nodeselector }}
     {{- $nodename := $nodeparts._0 }}

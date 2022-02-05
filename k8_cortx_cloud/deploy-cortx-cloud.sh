@@ -1208,14 +1208,6 @@ function deployCortxClient()
     printf "\n\n"
 }
 
-function deployCortxServices()
-{
-    printf "########################################################\n"
-    printf "# Deploy Services                                       \n"
-    printf "########################################################\n"
-    kubectl apply -f services/cortx-io-svc.yaml --namespace=$namespace
-}
-
 function cleanup()
 {
     #################################################################
@@ -1320,5 +1312,4 @@ deployCortxHa
 if [[ $num_motr_client -gt 0 ]]; then
     deployCortxClient
 fi
-deployCortxServices
 cleanup
