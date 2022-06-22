@@ -89,7 +89,8 @@ spec:
         args:
           - -c
           {{- if .Values.cortxdata.machineid.value }}
-          - /opt/seagate/cortx/provisioner/bin/cortx_deploy -n $MACHINE_ID -f /etc/cortx/solution -c yaml:///etc/cortx/cluster.conf
+          - /opt/seagate/cortx/provisioner/bin/cortx_deploy -n $MACHINE_ID -f /etc/cortx/solution -c consul://cortx-consul-server:8500/conf;
+            rm -f /etc/cortx/cluster.conf;
           {{- else }}
           - /opt/seagate/cortx/provisioner/bin/cortx_deploy -f /etc/cortx/solution -c yaml:///etc/cortx/cluster.conf
           {{- end }}
@@ -167,7 +168,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/hare/bin/hare_setup start --config yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/hare/bin/hare_setup start --config consul://cortx-consul-server:8500/conf;
           {{- end }}
           volumeMounts:
             - name: {{ .Values.cortxdata.cfgmap.volmountname }}
@@ -208,7 +209,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/motr/bin/motr_setup start --services confd --config yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/motr/bin/motr_setup start --services confd --config consul://cortx-consul-server:8500/conf;
           {{- end }}
           volumeDevices:
             # Loop through the node list info file which contains the following example:
@@ -281,7 +282,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/motr/bin/motr_setup start --services ioservice --idx $IO_INDEX --config yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/motr/bin/motr_setup start --services ioservice --idx $IO_INDEX --config consul://cortx-consul-server:8500/conf;
           {{- end }}
           volumeDevices:
             # Loop through the node list info file which contains the following example:

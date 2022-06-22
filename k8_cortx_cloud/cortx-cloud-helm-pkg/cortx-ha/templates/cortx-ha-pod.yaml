@@ -60,7 +60,8 @@ spec:
         args:
           - -c
           {{- if .Values.cortxha.machineid.value }}
-          - /opt/seagate/cortx/provisioner/bin/cortx_deploy -n $MACHINE_ID -f /etc/cortx/solution -c yaml:///etc/cortx/cluster.conf
+          - /opt/seagate/cortx/provisioner/bin/cortx_deploy -n $MACHINE_ID -f /etc/cortx/solution -c consul://cortx-consul-server:8500/conf;
+            rm -f /etc/cortx/cluster.conf;
           {{- else }}
           - /opt/seagate/cortx/provisioner/bin/cortx_deploy -f /etc/cortx/solution -c yaml:///etc/cortx/cluster.conf
           {{- end }}
@@ -105,7 +106,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/ha/bin/ha_start -s fault_tolerance -c yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/ha/bin/ha_start -s fault_tolerance -c consul://cortx-consul-server:8500/conf;
           {{- end }}
           volumeMounts:
             - name: {{ .Values.cortxha.cfgmap.volmountname }}
@@ -142,7 +143,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/ha/bin/ha_start -s health_monitor -c yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/ha/bin/ha_start -s health_monitor -c consul://cortx-consul-server:8500/conf
           {{- end }}
           volumeMounts:
             - name: {{ .Values.cortxha.cfgmap.volmountname }}
@@ -179,7 +180,7 @@ spec:
             - /bin/sh
           args:
             - -c
-            - /opt/seagate/cortx/ha/bin/ha_start -s k8s_monitor -c yaml:///etc/cortx/cluster.conf
+            - /opt/seagate/cortx/ha/bin/ha_start -s k8s_monitor -c consul://cortx-consul-server:8500/conf
           {{- end }}
           volumeMounts:
             - name: {{ .Values.cortxha.cfgmap.volmountname }}
